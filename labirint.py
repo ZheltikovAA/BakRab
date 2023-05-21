@@ -1,0 +1,34 @@
+import random
+
+# Начальные координаты
+start_x = 0
+start_y = 0
+
+# Стек для отслеживания позиций
+stack = [(start_x, start_y)]
+
+
+# Генерация лабиринта
+def labirint(maze, width_lab, height_lab):
+    stack = [(0, 0)]
+    while stack:
+        x, y = stack[-1]
+        maze[y][x] = 1
+
+        neighbors = [(x - 2, y), (x + 2, y), (x, y - 2), (x, y + 2)]
+        random.shuffle(neighbors)
+
+        found = False
+        for nx, ny in neighbors:
+            if nx >= 0 and nx < width_lab and ny >= 0 and ny < height_lab and maze[ny][nx] == 0:
+                maze[(ny + y) // 2][(nx + x) // 2] = 1
+                maze[ny][nx] = 1
+                stack.append((nx, ny))
+                found = True
+                break
+
+        if not found:
+            stack.pop()
+    maze[height_lab - 1][width_lab - 2] = 1
+    print(maze)
+    return maze
