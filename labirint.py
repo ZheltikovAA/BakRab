@@ -20,7 +20,7 @@ def labirint(maze, width_lab, height_lab):
 
         found = False
         for nx, ny in neighbors:
-            if nx >= 0 and nx < width_lab and ny >= 0 and ny < height_lab and maze[ny][nx] == 0:
+            if 0 <= nx < width_lab and 0 <= ny < height_lab and maze[ny][nx] == 0:
                 maze[(ny + y) // 2][(nx + x) // 2] = 1
                 maze[ny][nx] = 1
                 stack.append((nx, ny))
@@ -29,6 +29,7 @@ def labirint(maze, width_lab, height_lab):
 
         if not found:
             stack.pop()
-    maze[height_lab - 1][width_lab - 2] = 1
+    maze[height_lab - 1][width_lab - 2] = 2
     print(maze)
+    maze = [maze]
     return maze
