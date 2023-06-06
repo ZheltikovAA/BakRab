@@ -1,15 +1,17 @@
 import pyglet
 import random
 import NNConstructMaze
+import NNConstructMazeVAE
 import labirint
 import numba
 
 
 class Wall:
     def __init__(self, width_lab, height_lab, width, height):
-        matrix = [[0] * width_lab for _ in range(height_lab)]
-        self.matrix = labirint.labirint(matrix, width_lab, height_lab)
+        # matrix = [[0] * width_lab for _ in range(height_lab)]
+        # self.matrix = labirint.labirint(matrix, width_lab, height_lab)
         # self.matrix = NNConstructMaze.get_maze_nn()
+        self.matrix = NNConstructMazeVAE.get_data()
         print(len(self.matrix), " ", len(self.matrix[0]))
         self.matrix_height = height_lab
         self.matrix_width = width_lab

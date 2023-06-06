@@ -75,14 +75,37 @@ def vae_loss(x_recon, x, z_mean, z_log_var):
     return reconstruction_loss + kl_loss
 
 
+def train_model(num_epochs, num_samples):
+    for epoch in range(num_epochs):
+        for i in range(0, num_samples, batch_size):
+            batch_data = data[i:i + batch_size]
+            optimizer.zero_grad()
+            x_recon, z_mean, z_log_var = vae(batch_data)
+            loss = vae_loss(x_recon, batch_data, z_mean, z_log_var)
+            loss.backward()
+            optimizer.step()
+        print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
+    torch.save(vae.state_dict(), 'trained_model.pth')
+
+
+def get_data():
+    vae.load_state_dict(torch.load('trained_model.pth'))
+    # Пример генерации новых данных
+    sample_z = torch.randn(1, latent_dim)
+    generated_data = vae.decoder(sample_z)
+    maze = generated_data.detach().numpy()
+    maze = np.rint(maze)
+    print(maze.shape)
+    print(maze[0][0])
+    return maze[0][0]
+
+
 # Задаем оптимизатор и функцию потерь
 optimizer = optim.Adam(vae.parameters(), lr=0.001)
 
 # Генерируем случайные данные для обучения (аналогичные матрицы)
-
-num_samples = 32
+num_samples = 256
 training_data = []
-# maze = [[0] * 64 for _ in range(36)]
 for _ in range(num_samples):
     training_data.append(labirint.labirint([[0] * 64 for _ in range(36)], 64, 36))
 data = torch.tensor(np.array(training_data).astype('float32') >= 0.5).float()
@@ -90,22 +113,8 @@ data = torch.tensor(np.array(training_data).astype('float32') >= 0.5).float()
 # data = torch.randn(num_samples, 1, 36, 64)
 print(data.shape)
 # Обучаем модель
-num_epochs = 10
+num_epochs = 200
 batch_size = 32
-for epoch in range(num_epochs):
-    for i in range(0, num_samples, batch_size):
-        batch_data = data[i:i + batch_size]
-        optimizer.zero_grad()
-        x_recon, z_mean, z_log_var = vae(batch_data)
-        loss = vae_loss(x_recon, batch_data, z_mean, z_log_var)
-        loss.backward()
-        optimizer.step()
-    print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
+train_model(num_epochs, num_samples)
 
-# Пример генерации новых данных
-sample_z = torch.randn(1, latent_dim)
-generated_data = vae.decoder(sample_z)
-maze = generated_data.detach().numpy()
-maze = np.rint(maze)
-print(maze.shape)
-print(maze[0][0])
+get_data()
