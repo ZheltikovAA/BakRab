@@ -1,7 +1,7 @@
 import pyglet
 import random
-import NNConstructMaze
-import NNConstructMazeVAE
+import NNConstructMazeGANNew
+# import NNConstructMazeVAE
 import labirint
 import numba
 
@@ -10,12 +10,12 @@ class Wall:
     def __init__(self, width_lab, height_lab, width, height):
         # matrix = [[0] * width_lab for _ in range(height_lab)]
         # self.matrix = labirint.labirint(matrix, width_lab, height_lab)
-        # self.matrix = NNConstructMaze.get_maze_nn()
-        self.matrix = NNConstructMazeVAE.get_data()
+        self.matrix = NNConstructMazeGANNew.get_data(144)
+        # self.matrix = NNConstructMazeVAE.get_data("cuda")
         print(len(self.matrix), " ", len(self.matrix[0]))
         self.matrix_height = height_lab
         self.matrix_width = width_lab
-        # Размеры ячейки
+
         self.cell_width = width // len(self.matrix[0])
         self.cell_height = height // len(self.matrix)
         self.width = width
@@ -57,6 +57,5 @@ class Wall:
                 if self.matrix[i][j] == 1:
                     wall_data.append(j)
                     wall_data.append(i)
-
         return wall_data
-# создаем нужные рамки для окна
+

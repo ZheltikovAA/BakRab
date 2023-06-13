@@ -1,7 +1,7 @@
 import pyglet
-
 import numba
 import numpy as np
+
 
 class Human:
     def __init__(self, x, y, size, wall):
@@ -14,16 +14,17 @@ class Human:
 
         self.vertex_list = pyglet.graphics.vertex_list(4, ('v2i', vertices))
 
-        self.x = x
-        self.y = y
+        self.x = self.start_pos_x = x
+        self.y = self.start_pos_y = y
         self.size = size
         self.vertices = vertices
         self.new_x = 0
         self.new_y = 0
         self.num_rays = 4
         self.angle_between_rays = 360.0 / self.num_rays
-        self.max_ray_length = 200.0
+        self.max_ray_length = 50.0
 
+        self.score = 0
         self.keys = {
             pyglet.window.key.LEFT: False,
             pyglet.window.key.RIGHT: False,
@@ -52,11 +53,16 @@ class Human:
         self.vertex_list.draw(pyglet.gl.GL_QUADS)
         # self.draw_rays()
 
+    def restart(self):
+        self.x = self.start_pos_x
+        self.y = self.start_pos_y
+        self.score += 1
+
     def check_collision(self, x, y):
         # Проверяем столкновение с каждой стеной
         for i, row in enumerate(self.wall.matrix):
             for j, value in enumerate(row):
-                if value == 1:
+                if value == 1 or value == 2:
                     wall_x = j * self.wall.cell_width
                     wall_y = (self.wall.matrix_height - i - 1) * self.wall.cell_height
                     if x + self.size > wall_x and x < wall_x + self.wall.cell_width and \
@@ -74,6 +80,11 @@ class Human:
         # # Параметры для модели
         # x = self.new_x
         # y = self.new_y
+
+        if (10 >= y >= 0) and (1255 <= x <= 1260):
+            self.restart()
+            print(self.score)
+            return
 
         if 0 <= x <= self.wall.width - self.size and 0 <= y <= self.wall.height - self.size \
                 and self.check_collision(x, y):

@@ -3,14 +3,25 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-
-from torch.autograd import Variable
-
-# Задаем размерность латентного пространства
-latent_dim = 32
+import psutil as ps
+import time
 
 
-# Определяем класс энкодера
+latent_dim = 128
+
+
+def select_device(device):
+    if device == "cpu":
+        return torch.device("cpu")
+    elif device == "cuda":
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        else:
+            raise ValueError("CUDA is not available")
+    else:
+        raise ValueError("Invalid device")
+
+
 class Encoder(nn.Module):
     def __init__(self):
         super(Encoder, self).__init__()
@@ -42,7 +53,7 @@ class Decoder(nn.Module):
         x = nn.functional.relu(self.fc1(z))
         x = x.view(x.size(0), 64, 9, 16)
         x = nn.functional.relu(self.deconv1(x))
-        x = nn.functional.sigmoid(self.deconv2(x))
+        x = torch.sigmoid(self.deconv2(x))
         return x
 
 
@@ -64,7 +75,6 @@ class VAE(nn.Module):
         return x_recon, z_mean, z_log_var
 
 
-# Создаем экземпляр модели VAE
 vae = VAE()
 
 
@@ -75,46 +85,54 @@ def vae_loss(x_recon, x, z_mean, z_log_var):
     return reconstruction_loss + kl_loss
 
 
-def train_model(num_epochs, num_samples):
+def train_model(num_epochs, num_samples, device):
+    device = select_device(device)
+    vae.to(device)
     for epoch in range(num_epochs):
+        start_time = time.time()
+        loadavg = ps.cpu_percent(interval=None, percpu=False)
         for i in range(0, num_samples, batch_size):
-            batch_data = data[i:i + batch_size]
+            batch_data = data[i:i + batch_size].to(device)
             optimizer.zero_grad()
             x_recon, z_mean, z_log_var = vae(batch_data)
             loss = vae_loss(x_recon, batch_data, z_mean, z_log_var)
             loss.backward()
             optimizer.step()
-        print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
+        ex_time = time.time() - start_time
+        loadavg = ps.cpu_percent(interval=None, percpu=False) - loadavg
+        print('Epoch [{}/{}], Loss: {:.3f}, Time: {:.3f}, Load CPU: {:.3f}'
+              .format(epoch + 1, num_epochs, loss.item(), ex_time, loadavg))
     torch.save(vae.state_dict(), 'trained_model.pth')
 
 
-def get_data():
-    vae.load_state_dict(torch.load('trained_model.pth'))
+def get_data(device):
+    device = select_device(device)
+    vae = VAE()
+    vae.load_state_dict(torch.load('trained_model.pth', map_location=device))
+    vae.to(device)
     # Пример генерации новых данных
-    sample_z = torch.randn(1, latent_dim)
+    sample_z = torch.randn(1, latent_dim).to(device)
     generated_data = vae.decoder(sample_z)
-    maze = generated_data.detach().numpy()
+    maze = generated_data.detach().cpu().numpy()
+    maze[0][0][35][62] = 2
     maze = np.rint(maze)
-    print(maze.shape)
-    print(maze[0][0])
     return maze[0][0]
 
 
-# Задаем оптимизатор и функцию потерь
-optimizer = optim.Adam(vae.parameters(), lr=0.001)
+if __name__ == "__main__":
+    # Задаем оптимизатор и функцию потерь
+    optimizer = optim.Adam(vae.parameters(), lr=0.0003)
 
-# Генерируем случайные данные для обучения (аналогичные матрицы)
-num_samples = 256
-training_data = []
-for _ in range(num_samples):
-    training_data.append(labirint.labirint([[0] * 64 for _ in range(36)], 64, 36))
-data = torch.tensor(np.array(training_data).astype('float32') >= 0.5).float()
-
-# data = torch.randn(num_samples, 1, 36, 64)
-print(data.shape)
-# Обучаем модель
-num_epochs = 200
-batch_size = 32
-train_model(num_epochs, num_samples)
-
-get_data()
+    # Генерируем случайные данные для обучения (аналогичные матрицы)
+    num_samples = 10000
+    training_data = []
+    for _ in range(num_samples):
+        training_data.append(labirint.labirint([[0] * 64 for _ in range(36)], 64, 36))
+    data = torch.tensor(np.array(training_data).astype('float32') >= 0.5).float()
+    for i in range(num_samples):
+        data[i][0][35][62] = 2.
+    print(data.shape)
+    # Обучаем модель
+    num_epochs = 8000
+    batch_size = 1000
+    train_model(num_epochs, num_samples, "cuda")

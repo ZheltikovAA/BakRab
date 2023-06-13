@@ -7,7 +7,7 @@ import numpy as np
 import time
 
 import plot_graph
-from plot_graph import plt_graph
+from plot_graph import plt_graph, plt_gpu_use_grapf
 
 
 def select_device(device):
@@ -143,33 +143,34 @@ def train(num_epochs, train_data, loss_fn, generator, discriminator, optimizer_g
     discriminator.train()
     d_loss_list = []
     g_loss_list = []
+    memory_allocated = []
+    memory_reserved = []
     for epoch in range(num_epochs):
         start_time = time.time()
         print('Memory Usage: Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB',
               'Cached:   ', round(torch.cuda.memory_reserved(0) / 1024 ** 3, 1), 'GB')
         for i in range(0, len(train_data), batch_size):
             discriminator.zero_grad()
-            generator.zero_grad()
 
             real_inputs = train_data[i:i + batch_size].to(device)
             real_outputs = discriminator(real_inputs)
             real_label = torch.ones(real_inputs.shape[0], 1).to(device)
             # Получаем шум и закидываем в генератор для получения ложных матриц
-            # if epoch % 3 == 0:
-            noise = (torch.randn(real_inputs.shape[0], 144)).to(device)
+            if epoch % 2 == 0:
+                noise = (torch.randn(real_inputs.shape[0], 144)).to(device)
 
-            fake_inputs = generator(noise)
-            fake_outputs = discriminator(fake_inputs)
-            fake_label = torch.zeros(fake_inputs.shape[0], 1).to(device)
+                fake_inputs = generator(noise)
+                fake_outputs = discriminator(fake_inputs)
+                fake_label = torch.zeros(fake_inputs.shape[0], 1).to(device)
 
-            outputs = torch.cat((real_outputs, fake_outputs), 0)
-            targets = torch.cat((real_label, fake_label), 0)
-            # Train the Discriminator
-            d_loss = loss_fn(outputs, targets)
+                outputs = torch.cat((real_outputs, fake_outputs), 0)
+                targets = torch.cat((real_label, fake_label), 0)
+                # Train the Discriminator
+                d_loss = loss_fn(outputs, targets)
 
-            d_loss.backward()
-            optimizer_discriminator.step()
-
+                d_loss.backward()
+                optimizer_discriminator.step()
+            generator.zero_grad()
             # Получаем шум и закидываем в генератор для получения ложных матриц
             noise = (torch.randn(real_inputs.shape[0], 144))
             noise = noise.to(device)  # Перемещение шума на выбранное устройство
@@ -183,28 +184,32 @@ def train(num_epochs, train_data, loss_fn, generator, discriminator, optimizer_g
 
             g_loss.backward()
             optimizer_generator.step()
+        memory_allocated.append(round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1))
+        memory_reserved.append(round(torch.cuda.memory_reserved(0) / 1024 ** 3, 1))
 
-        # scheduler_disc.step()
-        # scheduler_gen.step()
+        scheduler_disc.step()
+        scheduler_gen.step()
         time_spend = time.time() - start_time
         d_loss_list.append(d_loss.item())
         g_loss_list.append(g_loss.item())
         print('Epoch [{}/{}], D_Loss: {:.3f}, G_Loss: {:.3f}, Time GPU: {:.3f}'
               .format(epoch + 1, num_epochs, d_loss.item(), g_loss.item(), time_spend))
         if epoch % 10 == 0:
+            plt_gpu_use_grapf(memory_allocated,memory_reserved)
             plt_graph(d_loss_list, g_loss_list)
             print("save")
-            torch.save(generator.state_dict(), 'D:\\BakRab\\DCGAN_Model_Tan\\Generator_epoch_DCGAN_{}.pth'.format(epoch))
+            torch.save(generator.state_dict(), 'D:\\BakRab\\DCGAN_Model_Tan_GPU_GRAPH\\Generator_epoch_DCGAN_{}.pth'.format(epoch))
     plt_graph(d_loss_list, g_loss_list)
     print("save")
-    torch.save(generator.state_dict(), 'D:\\BakRab\\DCGAN_Model_Tan\\Generator_epoch_DCGAN_{}.pth'.format(num_epochs))
+    torch.save(generator.state_dict(), 'D:\\BakRab\\DCGAN_Model_Tan_GPU_GRAPH\\Generator_epoch_DCGAN_{}.pth'.format(num_epochs))
 
 
 def get_data(input_dim_noize_vector):
+    print(torch.cuda.get_device_name())
     start_time = time.time()
     device_new = torch.device('cuda:0')
     generator = Generator(144)
-    generator.load_state_dict(torch.load('D:\\BakRab\\DCGAN_Model_Tan\\Generator_epoch_DCGAN_600.pth', map_location=device_new))
+    generator.load_state_dict(torch.load('D:\\BakRab\\DCGAN_Model_Tan_GPU_GRAPH\\Generator_epoch_DCGAN_990.pth', map_location=device_new))
     generator.to(device_new)
     generator.eval()
     noise = (torch.randn(1, 144)).to(device_new)
@@ -220,10 +225,10 @@ def get_data(input_dim_noize_vector):
 
 
 if __name__ == "__main__":
-    num_epochs = 1000
-    batch_size = 5000
+    num_epochs = 10000
+    batch_size = 25000
     input_dim_noize_vector = 144
-    n = 50000
+    n = 200000
 
     device = select_device("cuda")
 

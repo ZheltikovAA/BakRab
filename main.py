@@ -5,21 +5,22 @@ import Wall
 import numba
 
 
+def update(dt):
+    people.update(dt)
+
+
 width = 1280
 height = 720
-
-# создаем окно
-window = pyglet.window.Window(width, height)
-
-pos_x = 0
+pos_x = 10
 pos_y = 20
 size_xy = 10
-# создаем объект квадрата
+
+window = pyglet.window.Window(width, height)
+
 wall = Wall.Wall(64, 36, width, height)
 people = Human.Human(pos_x, pos_y, size_xy, wall)
 
 
-# функция, которая вызывается каждый кадр
 @window.event
 def on_draw():
     window.clear()
@@ -41,12 +42,6 @@ def on_key_release(symbol, modifiers):
         people.keys[symbol] = False
 
 
-# функция, которая вызывается каждый кадр
-def update(dt):
-    people.update(dt)
-
-
-# устанавливаем интервал обновления
-pyglet.clock.schedule_interval(update, 1 / 165)
-
+pyglet.clock.schedule_interval(update, 1 / 720)
 pyglet.app.run()
+

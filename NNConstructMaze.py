@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import sys
+import time
 
 # Модификации GAN
 
@@ -52,7 +53,7 @@ def train_gan(data, num_epochs, batch_size, generator, discriminator, generator_
 
     for epoch in range(num_epochs):
         for i in range(0, len(data), batch_size):
-            # real_inputs - изображения из набора данных MNIST
+            # real_inputs - изображения из набора данных
             # fake_inputs - изображения от генератора
             # real_inputs должны быть классифицированы как 1, а fake_inputs - как 0
             real_inputs = data[i:i + batch_size].to(device)
@@ -80,10 +81,9 @@ def train_gan(data, num_epochs, batch_size, generator, discriminator, generator_
             generator_optimizer.zero_grad()
             G_loss.backward()
             generator_optimizer.step()
-            if i % 100 == 0 or i == len(data):
-                print('Epoch {} Iteration {}: discriminator_loss {:.3f} generator_loss {:.3f}'.format(epoch, i,
-                                                                                                      D_loss.item(),
-                                                                                                      G_loss.item()))
+
+        print('Epoch {}: discriminator_loss {:.3f} generator_loss {:.3f}'.format(epoch, D_loss.item(),
+                                                                                         G_loss.item()))
 
     torch.save(generator.state_dict(), 'Generator_epoch.pth')
 
@@ -91,38 +91,53 @@ def train_gan(data, num_epochs, batch_size, generator, discriminator, generator_
 # Создаем экземпляры генератора и дискриминатора
 input_size = 128
 hidden_size = 256
-output_size = 64 * 36
+output_size = 36 * 64
 generator = Generator(input_size, hidden_size, output_size)
 discriminator = Discriminator(output_size, hidden_size)
 
-
 # Определяем устройство (CPU или GPU)
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 generator.to(device)
 discriminator.to(device)
 
 # Определяем оптимизаторы
-generator_optimizer = optim.Adam(generator.parameters(), lr=0.0002, betas=(0.5, 0.999))
-discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=0.0002, betas=(0.5, 0.999))
+generator_optimizer = optim.RMSprop(generator.parameters(), lr=0.0001)
+discriminator_optimizer = optim.RMSprop(discriminator.parameters(), lr=0.0001)
 
 # Генерируем обучающие данные
 training_data = []
-for _ in range(256):
-    training_data.append(labirint.labirint([[0] * 64 for _ in range(36)], 64, 36))
-data = torch.tensor(np.array(training_data).astype('float32') >= 0.5).float()
+# for i in range(12000):
+#     training_data.append(labirint.labirint([[0] * 64 for _ in range(36)], 64, 36))
+#     print(i)
+# data = torch.tensor(np.array(training_data).astype('float32') >= 0.5).float()
+# for i in range(12000):
+#     data[i][35][62] = 2.
+print(torch.cuda.get_device_name())
 # Обучаем GAN
-num_epochs = 100
-batch_size = 32
+num_epochs = 10000
+batch_size = 100
+start_time = time.time()
+
 # train_gan(data, num_epochs, batch_size, generator, discriminator, generator_optimizer, discriminator_optimizer, device)
 
+end_time = time.time()
+execution_time = end_time - start_time
+print("All time spent : {}".format(execution_time))
+
 def get_maze_nn():
-    generator.load_state_dict(torch.load('Generator_epoch.pth'))
+    start_time = time.time()
+    device_new = torch.device('cuda:0')
+    generator.to(device_new)
+    generator.load_state_dict(torch.load('Generator_epoch.pth', map_location=device_new))
     generator.eval()
     noise = (torch.rand(1, input_size) - 0.5) / 0.5
+    noise = noise.to(device_new)
     maze = generator(noise)
-    maze_np = maze.view(36, 64).detach().numpy()
+    maze_np = maze.view(36, 64).detach().cpu().numpy()
     maze_np = np.rint(maze_np)
-    # np.set_printoptions(threshold=sys.maxsize)
-    # print(np.sum(maze_np > 0.5))
-    print(len(maze_np) , " ", len(maze_np[0]))
+    print(len(maze_np), " ", len(maze_np[0]))
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print("All time spent : {}".format(execution_time))
     return maze_np
