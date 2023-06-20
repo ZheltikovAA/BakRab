@@ -50,8 +50,9 @@ class Discriminator(nn.Module):
 def train_gan(data, num_epochs, batch_size, generator, discriminator, generator_optimizer, discriminator_optimizer,
               device):
     criterion = nn.BCELoss()
-
     for epoch in range(num_epochs):
+        print('Memory Usage: Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB',
+              'Cached:   ', round(torch.cuda.memory_reserved(0) / 1024 ** 3, 1), 'GB')
         for i in range(0, len(data), batch_size):
             # real_inputs - изображения из набора данных
             # fake_inputs - изображения от генератора
@@ -105,21 +106,22 @@ discriminator.to(device)
 generator_optimizer = optim.RMSprop(generator.parameters(), lr=0.0001)
 discriminator_optimizer = optim.RMSprop(discriminator.parameters(), lr=0.0001)
 
-# Генерируем обучающие данные
+
 training_data = []
-# for i in range(12000):
-#     training_data.append(labirint.labirint([[0] * 64 for _ in range(36)], 64, 36))
-#     print(i)
-# data = torch.tensor(np.array(training_data).astype('float32') >= 0.5).float()
-# for i in range(12000):
-#     data[i][35][62] = 2.
+for i in range(5000):
+    maze, loadavg, loadavg_all = labirint.labirint([[0] * 64 for _ in range(36)], 64, 36)
+    training_data.append(maze)
+    print(i)
+data = torch.tensor(np.array(training_data).astype('float32') >= 0.5).float()
+for i in range(5000):
+    data[i][35][62] = 2.
 print(torch.cuda.get_device_name())
 # Обучаем GAN
-num_epochs = 10000
-batch_size = 100
+num_epochs = 2000
+batch_size = 1000
 start_time = time.time()
 
-# train_gan(data, num_epochs, batch_size, generator, discriminator, generator_optimizer, discriminator_optimizer, device)
+train_gan(data, num_epochs, batch_size, generator, discriminator, generator_optimizer, discriminator_optimizer, device)
 
 end_time = time.time()
 execution_time = end_time - start_time

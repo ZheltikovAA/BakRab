@@ -1,47 +1,49 @@
 import pyglet
-# import NNConstructMaze
 import Human
 import Wall
-import numba
 
 
-def update(dt):
-    people.update(dt)
+class Game_maze(pyglet.window.Window):
+    def __init__(self, width=1280, height=720):
+        super().__init__(width, height)
+        self.width = width
+        self.height = height
+        self.start_pos_x = 0
+        self.start_pos_y = 20
+        self.size_xy = 10
+        self.score = 0
+        self.wall = Wall.Wall(64, 36, width, height)
+        self.people = Human.Human(self.start_pos_x, self.start_pos_y, self.size_xy, self.wall)
+        self.window = pyglet.window.Window(self.width, self.height)
+    def update(self, dt):
+        pyglet.clock.schedule_once(self.update, 0)
+        self.people.update(dt)
+
+    def on_draw(self):
+        self.window.clear()
+        self.wall.draw(self.people.score)
+        self.people.draw()
+
+    # функция, которая вызывается при нажатии клавиши
+
+    def on_key_press(self, symbol, modifiers):
+        pyglet.clock.schedule_once(game.update, 0)
+        if symbol in self.people.keys:
+            self.people.keys[symbol] = True
+
+    # функция, которая вызывается при отпускании клавиши
+
+    def on_key_release(self, symbol, modifiers):
+        if symbol in self.people.keys:
+            self.people.keys[symbol] = False
+
+    def start_game(self):
+        # pyglet.clock.schedule(self.update)
+        pyglet.app.run()
 
 
-width = 1280
-height = 720
-pos_x = 10
-pos_y = 20
-size_xy = 10
+if __name__ == "__main__":
+    game = Game_maze()
+    game.start_game()
 
-window = pyglet.window.Window(width, height)
-
-wall = Wall.Wall(64, 36, width, height)
-people = Human.Human(pos_x, pos_y, size_xy, wall)
-
-
-@window.event
-def on_draw():
-    window.clear()
-    wall.draw()
-    people.draw()
-
-
-# функция, которая вызывается при нажатии клавиши
-@window.event
-def on_key_press(symbol, modifiers):
-    if symbol in people.keys:
-        people.keys[symbol] = True
-
-
-# функция, которая вызывается при отпускании клавиши
-@window.event
-def on_key_release(symbol, modifiers):
-    if symbol in people.keys:
-        people.keys[symbol] = False
-
-
-pyglet.clock.schedule_interval(update, 1 / 720)
-pyglet.app.run()
 

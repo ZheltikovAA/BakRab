@@ -127,7 +127,8 @@ def generate_train_data(n):
     start_time = time.time()
     training_data = []
     for _ in range(n):
-        training_data.append(labirint.labirint([[0] * 64 for _ in range(36)], 64, 36))
+        maze, loadavg, loadavg_all = labirint.labirint_ai([[0] * 64 for _ in range(36)], 64, 36)
+        training_data.append(maze)
     data = torch.tensor(np.array(training_data).astype('float32') <= 0.5).float()
     for i in range(n):
         data[i][0][35][62] = 2.
@@ -187,21 +188,21 @@ def train(num_epochs, train_data, loss_fn, generator, discriminator, optimizer_g
         memory_allocated.append(round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1))
         memory_reserved.append(round(torch.cuda.memory_reserved(0) / 1024 ** 3, 1))
 
-        scheduler_disc.step()
-        scheduler_gen.step()
+        # scheduler_disc.step()
+        # scheduler_gen.step()
         time_spend = time.time() - start_time
         d_loss_list.append(d_loss.item())
         g_loss_list.append(g_loss.item())
         print('Epoch [{}/{}], D_Loss: {:.3f}, G_Loss: {:.3f}, Time GPU: {:.3f}'
               .format(epoch + 1, num_epochs, d_loss.item(), g_loss.item(), time_spend))
-        if epoch % 10 == 0:
+        if epoch % 100 == 0:
             plt_gpu_use_grapf(memory_allocated,memory_reserved)
             plt_graph(d_loss_list, g_loss_list)
             print("save")
-            torch.save(generator.state_dict(), 'D:\\BakRab\\DCGAN_Model_Tan_GPU_GRAPH\\Generator_epoch_DCGAN_{}.pth'.format(epoch))
+            torch.save(generator.state_dict(), 'D:\\BakRab\\DCGAN_Model_Tan_GPU_GRAPH_pow\\Generator_epoch_DCGAN_{}.pth'.format(epoch))
     plt_graph(d_loss_list, g_loss_list)
     print("save")
-    torch.save(generator.state_dict(), 'D:\\BakRab\\DCGAN_Model_Tan_GPU_GRAPH\\Generator_epoch_DCGAN_{}.pth'.format(num_epochs))
+    torch.save(generator.state_dict(), 'D:\\BakRab\\DCGAN_Model_Tan_GPU_GRAPH_pow\\Generator_epoch_DCGAN_{}.pth'.format(num_epochs))
 
 
 def get_data(input_dim_noize_vector):
@@ -209,7 +210,7 @@ def get_data(input_dim_noize_vector):
     start_time = time.time()
     device_new = torch.device('cuda:0')
     generator = Generator(144)
-    generator.load_state_dict(torch.load('D:\\BakRab\\DCGAN_Model_Tan_GPU_GRAPH\\Generator_epoch_DCGAN_990.pth', map_location=device_new))
+    generator.load_state_dict(torch.load('D:\\BakRab\\DCGAN_Model_Tan_GPU_GRAPH_pow\\Generator_epoch_DCGAN_450.pth', map_location=device_new))
     generator.to(device_new)
     generator.eval()
     noise = (torch.randn(1, 144)).to(device_new)
@@ -225,10 +226,10 @@ def get_data(input_dim_noize_vector):
 
 
 if __name__ == "__main__":
-    num_epochs = 10000
-    batch_size = 25000
+    num_epochs = 1000
+    batch_size = 5000
     input_dim_noize_vector = 144
-    n = 200000
+    n = 100000
 
     device = select_device("cuda")
 
@@ -239,8 +240,8 @@ if __name__ == "__main__":
     generator = generator.to(device)
     discriminator = discriminator.to(device)
 
-    optimizer_gen = torch.optim.RMSprop(generator.parameters(), lr=0.002)
-    optimizer_disc = torch.optim.RMSprop(discriminator.parameters(), lr=0.002)
+    optimizer_gen = torch.optim.Adam(generator.parameters(), lr=0.002)
+    optimizer_disc = torch.optim.Adam(discriminator.parameters(), lr=0.002)
 
     scheduler_gen = StepLR(optimizer_gen, step_size=250, gamma=0.1)
     scheduler_disc = StepLR(optimizer_disc, step_size=250, gamma=0.1)

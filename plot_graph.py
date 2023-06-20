@@ -42,3 +42,22 @@ def plt_gpu_use_grapf(allocated, reserved):
     plt.grid()
     # Отображение графика
     plt.show()
+
+
+def plt_cpu_use_graph(cpu):
+    fig, ax = plt.subplots()
+
+    # Построение графика для g_loss
+
+    ax.plot(range(len(cpu)), cpu, label=['cpu1', 'cpu2', 'cpu3', 'cpu4'])
+
+    # Настройка заголовка и меток осей
+    ax.set_title('CPU graph usage')
+    ax.set_xlabel('Per Epoch')
+    ax.set_ylabel('Percent')
+
+    # Добавление легенды
+    ax.legend()
+    plt.grid()
+    # Отображение графика
+    plt.show()

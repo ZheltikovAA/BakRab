@@ -1,8 +1,8 @@
 import pyglet
 import numba
 import numpy as np
-
-
+import Wall
+import main
 class Human:
     def __init__(self, x, y, size, wall):
         vertices = [
@@ -31,27 +31,17 @@ class Human:
             pyglet.window.key.UP: False,
             pyglet.window.key.DOWN: False,
         }
+        self.keys_AI = [0, 0, 0, 0]
         self.wall = wall
         self.color = (255, 0, 0)
 
         self.ray_color = (255, 123, 10)
 
-    def move_left(self):
-        self.new_x -= 1
-
-    def move_right(self):
-        self.new_x += 1
-
-    def move_up(self):
-        self.new_y += 1
-
-    def move_down(self):
-        self.new_y -= 1
+    # Направление будем задавать массивом [up, down, right, left]
 
     def draw(self):
         pyglet.gl.glColor3f(*self.color)
         self.vertex_list.draw(pyglet.gl.GL_QUADS)
-        # self.draw_rays()
 
     def restart(self):
         self.x = self.start_pos_x
@@ -70,10 +60,14 @@ class Human:
                         return True
         return False
 
-    def update(self, dt):
+    def update(self,  dt):
         # изменяем координаты квадрата на заданный вектор
+        # self.keys_AI = action
+
         dx = (self.keys[pyglet.window.key.RIGHT] - self.keys[pyglet.window.key.LEFT]) * 10
         dy = (self.keys[pyglet.window.key.UP] - self.keys[pyglet.window.key.DOWN]) * 10
+
+        self.keys_AI = [0, 0, 0, 0]
 
         x = self.x + dx
         y = self.y + dy
@@ -91,6 +85,7 @@ class Human:
             self.x = x
             self.y = y
 
+        self.get_distances()
         # обновляем список вершин квадрата с новыми координатами
         vertices = [
             self.x, self.y,
@@ -100,58 +95,50 @@ class Human:
         ]
         self.vertex_list.vertices = vertices
 
-    def draw_rays(self):
-        # Позиция человека
-        global wall_x, wall_y
-        x = self.x + self.size / 2
-        y = self.y + self.size / 2
 
-        # Отрисовка лучей
-        for i in numba.prange(self.num_rays):
-            # Угол текущего луча
-            angle = np.radians(i * self.angle_between_rays)
+    def get_distances(self, cube_size=20):
+        distances = [0, 0, 0, 0]  # Расстояния в 4 направлениях: [вправо, влево, вверх, вниз]
+        agent_x = (self.x + self.x + 10) / 2
+        agent_y = (self.y * 2 + 10) / 2
+        wall_matrix = self.wall.matrix
 
-            # Координаты направления луча
-            ray_dir_x = np.cos(angle)
-            ray_dir_y = np.sin(angle)
+        # Получаем размеры лабиринта
+        wall_height = len(wall_matrix)
+        wall_width = len(wall_matrix[0])
 
-            # Начальные координаты луча
-            ray_start_x = x
-            ray_start_y = y
-            distance = [0] * 4
-            # Итерация по лучу для нахождения стены
-            for ray_length in numba.prange(int(self.max_ray_length)):
-                # Координаты текущей точки на луче
-                ray_x = ray_start_x + ray_dir_x * ray_length
-                ray_y = ray_start_y + ray_dir_y * ray_length
-                if ray_x < 0 or ray_x > self.wall.width or ray_y < 0 or ray_y > self.wall.height:
-                    # Отрисовка луча
-                    pyglet.graphics.draw(2, pyglet.gl.GL_LINES, ('v2f', (x, y, ray_x, ray_y)),
-                                         ('c3B', self.ray_color * 2))
-                    break
-                # Проверка столкновения с каждой стеной
-                for i, row in enumerate(self.wall.matrix):
-                    for j, value in enumerate(row):
-                        if value == 0:
-                            wall_x = j * self.wall.cell_width
-                            wall_y = (self.wall.matrix_height - i - 1) * self.wall.cell_height
-                            if wall_x <= ray_x <= wall_x + self.wall.cell_width and \
-                                    wall_y <= ray_y <= wall_y + self.wall.cell_height:
-                                # Отрисовка луча
-                                pyglet.graphics.draw(2, pyglet.gl.GL_LINES, ('v2f', (x, y, ray_x, ray_y)),
-                                                     ('c3B', self.ray_color * 2))
+        # Определяем координаты агента внутри клетки лабиринта
+        agent_cell_x = int(agent_x // cube_size)
+        agent_cell_y = wall_height - int(agent_y // cube_size) - 1
+        print(agent_x, agent_cell_x, "<--x")
+        print(agent_y, agent_cell_y, "<--y")
+        # Вычисляем расстояние до стены вправо
+        for col in range(agent_cell_x + 1, wall_width):
+            if wall_matrix[agent_cell_y][col] == 0:  # Если стена найдена
+                distances[0] = (col - agent_cell_x)-1  # Вычисляем расстояние до стены
+                break
 
-                                # Отрисовка точки пересечения
-                                pyglet.graphics.draw(1, pyglet.gl.GL_POINTS, ('v2f', (ray_x, ray_y)),
-                                                     ('c3B', self.ray_color))
-                                break
+        # Вычисляем расстояние до стены влево
+        for col in range(agent_cell_x - 1, 0, -1):
+            if wall_matrix[agent_cell_y][col] == 0:  # Если стена найдена
+                distances[1] = (agent_cell_x - col)-1  # Вычисляем расстояние до стены
+                break
+            else:
+                distances[1] = agent_cell_x
 
-                    # Прерываем внутренний цикл, если найдена стена
-                    if wall_x <= ray_x <= wall_x + self.wall.cell_width and \
-                            wall_y <= ray_y <= wall_y + self.wall.cell_height:
-                        break
+        # Вычисляем расстояние до стены вниз
+        for row in range(agent_cell_y + 1, wall_height):
+            if wall_matrix[row][agent_cell_x] == 0:  # Если стена найдена
+                distances[2] = (row - agent_cell_y)-1  # Вычисляем расстояние до стены
+                break
 
-                # Прерываем внешний цикл, если найдена стена
-                if wall_x <= ray_x <= wall_x + self.wall.cell_width and \
-                        wall_y <= ray_y <= wall_y + self.wall.cell_height:
-                    break
+        # Вычисляем расстояние до стены вверх
+        for row in range(agent_cell_y - 1, -1, -1):
+            if wall_matrix[row][agent_cell_x] == 0:  # Если стена найдена
+                distances[3] = (agent_cell_y - row)-1  # Вычисляем расстояние до стены
+                break
+            else:
+                distances[3] = agent_cell_y
+
+        print(distances)
+        return distances
+

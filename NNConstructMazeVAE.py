@@ -5,7 +5,7 @@ import torch.optim as optim
 import numpy as np
 import psutil as ps
 import time
-
+import plot_graph
 
 latent_dim = 128
 
@@ -124,15 +124,24 @@ if __name__ == "__main__":
     optimizer = optim.Adam(vae.parameters(), lr=0.0003)
 
     # Генерируем случайные данные для обучения (аналогичные матрицы)
-    num_samples = 10000
+    num_samples = 1000
     training_data = []
+    loadavg = []
+    loadavg_all = []
+    start = time.time()
     for _ in range(num_samples):
-        training_data.append(labirint.labirint([[0] * 64 for _ in range(36)], 64, 36))
+        maze, loadavg_cpu, loadavg_ = labirint.labirint([[0] * 64 for _ in range(36)], 64, 36)
+        training_data.append(maze)
+        loadavg.append(loadavg_cpu)
+        loadavg_all.append(loadavg_)
     data = torch.tensor(np.array(training_data).astype('float32') >= 0.5).float()
     for i in range(num_samples):
         data[i][0][35][62] = 2.
+    print("spend_time: ", time.time() - start)
     print(data.shape)
+    plot_graph.plt_cpu_use_graph(loadavg)
     # Обучаем модель
-    num_epochs = 8000
-    batch_size = 1000
+    num_epochs = 2000
+    batch_size = 250
+    print(sum(loadavg_all) / num_samples)
     train_model(num_epochs, num_samples, "cuda")
