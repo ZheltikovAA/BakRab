@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 import psutil as ps
+import gc
 import time
 import plot_graph
 
@@ -88,6 +89,7 @@ def vae_loss(x_recon, x, z_mean, z_log_var):
 def train_model(num_epochs, num_samples, device):
     device = select_device(device)
     vae.to(device)
+    loss_mass = []
     for epoch in range(num_epochs):
         start_time = time.time()
         loadavg = ps.cpu_percent(interval=None, percpu=False)
@@ -95,13 +97,16 @@ def train_model(num_epochs, num_samples, device):
             batch_data = data[i:i + batch_size].to(device)
             optimizer.zero_grad()
             x_recon, z_mean, z_log_var = vae(batch_data)
-            loss = vae_loss(x_recon, batch_data, z_mean, z_log_var)
+            loss = vae_loss(x_recon, batch_data, z_mean, z_log_var)/batch_size
             loss.backward()
             optimizer.step()
         ex_time = time.time() - start_time
         loadavg = ps.cpu_percent(interval=None, percpu=False) - loadavg
         print('Epoch [{}/{}], Loss: {:.3f}, Time: {:.3f}, Load CPU: {:.3f}'
               .format(epoch + 1, num_epochs, loss.item(), ex_time, loadavg))
+        loss_mass.append(loss.item())
+        if epoch % 50 == 0:
+            plot_graph.plt_graph_vae(loss_mass)
     torch.save(vae.state_dict(), 'trained_model.pth')
 
 
@@ -121,16 +126,16 @@ def get_data(device):
 
 if __name__ == "__main__":
     # Задаем оптимизатор и функцию потерь
-    optimizer = optim.Adam(vae.parameters(), lr=0.0003)
-
+    optimizer = optim.RMSprop(vae.parameters(), lr=0.0001)
     # Генерируем случайные данные для обучения (аналогичные матрицы)
+
     num_samples = 1000
     training_data = []
     loadavg = []
     loadavg_all = []
     start = time.time()
     for _ in range(num_samples):
-        maze, loadavg_cpu, loadavg_ = labirint.labirint([[0] * 64 for _ in range(36)], 64, 36)
+        maze, loadavg_cpu, loadavg_ = labirint.labirint_ai([[0] * 64 for _ in range(36)], 64, 36)
         training_data.append(maze)
         loadavg.append(loadavg_cpu)
         loadavg_all.append(loadavg_)
@@ -141,7 +146,7 @@ if __name__ == "__main__":
     print(data.shape)
     plot_graph.plt_cpu_use_graph(loadavg)
     # Обучаем модель
-    num_epochs = 2000
-    batch_size = 250
+    num_epochs = 1000
+    batch_size = 1000
     print(sum(loadavg_all) / num_samples)
     train_model(num_epochs, num_samples, "cuda")

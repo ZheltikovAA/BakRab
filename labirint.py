@@ -52,4 +52,4 @@ def labirint_ai(maze, width_lab, height_lab):
             stack.pop()
     maze[height_lab - 1][width_lab - 2] = 2
     # print(maze)
-    return [maze], loadavg, loadavg_all
+    return maze, loadavg, loadavg_all

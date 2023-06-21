@@ -157,20 +157,20 @@ def train(num_epochs, train_data, loss_fn, generator, discriminator, optimizer_g
             real_outputs = discriminator(real_inputs)
             real_label = torch.ones(real_inputs.shape[0], 1).to(device)
             # Получаем шум и закидываем в генератор для получения ложных матриц
-            if epoch % 2 == 0:
-                noise = (torch.randn(real_inputs.shape[0], 144)).to(device)
+            # if epoch % 2 == 0:
+            noise = (torch.randn(real_inputs.shape[0], 144)).to(device)
 
-                fake_inputs = generator(noise)
-                fake_outputs = discriminator(fake_inputs)
-                fake_label = torch.zeros(fake_inputs.shape[0], 1).to(device)
+            fake_inputs = generator(noise)
+            fake_outputs = discriminator(fake_inputs)
+            fake_label = torch.zeros(fake_inputs.shape[0], 1).to(device)
 
-                outputs = torch.cat((real_outputs, fake_outputs), 0)
-                targets = torch.cat((real_label, fake_label), 0)
-                # Train the Discriminator
-                d_loss = loss_fn(outputs, targets)
+            outputs = torch.cat((real_outputs, fake_outputs), 0)
+            targets = torch.cat((real_label, fake_label), 0)
+            # Train the Discriminator
+            d_loss = loss_fn(outputs, targets)
 
-                d_loss.backward()
-                optimizer_discriminator.step()
+            d_loss.backward()
+            optimizer_discriminator.step()
             generator.zero_grad()
             # Получаем шум и закидываем в генератор для получения ложных матриц
             noise = (torch.randn(real_inputs.shape[0], 144))
@@ -227,7 +227,7 @@ def get_data(input_dim_noize_vector):
 
 if __name__ == "__main__":
     num_epochs = 1000
-    batch_size = 5000
+    batch_size = 50000
     input_dim_noize_vector = 144
     n = 100000
 

@@ -23,6 +23,24 @@ def plt_graph(d_loss, g_loss):
     plt.show()
 
 
+def plt_graph_vae(loss):
+    fig, ax = plt.subplots()
+
+    # Построение графика для g_loss
+    ax.plot(range(len(loss)), loss, label='Loss')
+
+    # Настройка заголовка и меток осей
+    ax.set_title('VAE Loss')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+
+    # Добавление легенды
+    ax.legend()
+    plt.grid()
+    # Отображение графика
+    plt.show()
+
+
 def plt_gpu_use_grapf(allocated, reserved):
     fig, ax = plt.subplots()
 
