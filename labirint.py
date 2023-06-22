@@ -31,6 +31,7 @@ def labirint(maze, width_lab, height_lab):
             stack.pop()
     maze[height_lab - 1][width_lab - 2] = 2
     return maze
+
 def labirint_ai(maze, width_lab, height_lab):
     loadavg = ps.cpu_percent(interval=None, percpu=True)
     loadavg_all = ps.cpu_percent(interval=None, percpu=False)

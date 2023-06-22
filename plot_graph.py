@@ -61,7 +61,22 @@ def plt_gpu_use_grapf(allocated, reserved):
     # Отображение графика
     plt.show()
 
+def plt_cpuavg_use_graph(cpu):
+    fig, ax = plt.subplots()
 
+    # Построение графика для g_loss
+    ax.plot(range(len(cpu)), cpu)
+
+    # Настройка заголовка и меток осей
+    ax.set_title('CPU load average')
+    ax.set_xlabel('Count')
+    ax.set_ylabel('Percent')
+
+    # Добавление легенды
+    ax.legend()
+    plt.grid()
+    # Отображение графика
+    plt.show()
 def plt_cpu_use_graph(cpu):
     fig, ax = plt.subplots()
 
